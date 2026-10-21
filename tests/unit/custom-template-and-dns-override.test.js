@@ -89,6 +89,24 @@ describe('Custom template isolation & Custom DNS override', () => {
         ]);
     });
 
+    it('将当前默认 DNS 显式填入覆写后，自定义模板的配置及 DNS 出口引用保持一致', () => {
+        const options = {
+            nodeList: sampleNodeList,
+            ruleLevel: 'none',
+            fileName: 'TestSub',
+        };
+        const before = yaml.load(renderClashFromIniTemplate(customIniTemplate, options));
+        const after = yaml.load(
+            renderClashFromIniTemplate(customIniTemplate, {
+                ...options,
+                customDnsOverride: yaml.dump({ dns: before.dns }),
+            })
+        );
+
+        expect(after).toEqual(before);
+        expect(after['proxy-groups'].some((group) => group.name === DNS_PROXY_GROUP)).toBe(true);
+    });
+
     it('does not inject DNS_PROXY_GROUP when customDnsOverride is configured in template pipeline', () => {
         const output = renderClashFromIniTemplate(customIniTemplate, {
             nodeList: sampleNodeList,

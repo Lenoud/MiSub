@@ -5,7 +5,7 @@ import {
     FALLBACK_GROUP,
     MANUAL_SELECT_GROUP,
 } from './builtin-rules-provider.js';
-import { DNS_PROXY_GROUP } from './safe-dns.js';
+import { DNS_PROXY_GROUP, resolveSafeDnsConfig } from './safe-dns.js';
 
 /**
  * 解析并扩展策略组中的正则过滤器
@@ -335,13 +335,12 @@ export function applySmartModelOptimizations(model) {
     // 1. 执行现有的正则过滤器解析 (始终执行)
     resolveGroupFilters(model);
 
-    // 2. DNS 出口策略组注入：
-    // 只要没用自定义 DNS（使用作者默认 Safe DNS），就保证注入 DNS 出口策略组；
-    // 只要自定义配置了 DNS，就不跟随注入 DNS 出口策略组。
-    const hasCustomDns = Boolean(
-        model.settings?.customDnsOverride && String(model.settings.customDnsOverride).trim()
-    );
-    if (!hasCustomDns) {
+    // 2. 根据实际 DNS 引用保留出口组；将默认 DNS 显式填入覆写框时也需要它。
+    const dns = resolveSafeDnsConfig(model.settings?.customDnsOverride || '', {
+        mode: model.settings?.dnsMode,
+        proxyGroup: DNS_PROXY_GROUP,
+    });
+    if (JSON.stringify(dns).includes(`#${DNS_PROXY_GROUP}`)) {
         ensureDnsProxyGroup(model);
     }
 
