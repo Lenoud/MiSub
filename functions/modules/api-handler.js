@@ -11,7 +11,6 @@ import {
     isUsingDefaultPassword,
     createJsonResponse,
     createErrorResponse,
-    migrateProfileIds,
     JSON_BODY_LIMITS,
     readJsonWithLimit,
 } from './utils.js';
@@ -33,6 +32,7 @@ import {
     DEFAULT_SETTINGS as defaultSettings,
 } from './config.js';
 import { listRuleTemplates } from './rule-template-handler.js';
+import { migrateStoredProfileIds } from './profile-id-migration.js';
 
 const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
 
@@ -202,16 +202,10 @@ export async function handleDataRequest(env, context = null) {
                 return [];
             }),
         ]);
-        const profiles = await attachProfileDownloadCounts(storageAdapter, rawProfiles);
-
-        // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
-        if (migrateProfileIds(profiles)) {
-            storageAdapter
-                .put(KV_KEY_PROFILES, profiles)
-                .catch((err) =>
-                    console.error('[Migration] Failed to persist migrated profile IDs:', err)
-                );
-        }
+        const profiles = await attachProfileDownloadCounts(
+            storageAdapter,
+            await migrateStoredProfileIds(storageAdapter, rawProfiles)
+        );
         const config = {
             ...defaultSettings,
             ...settings,
@@ -427,10 +421,10 @@ export async function handleMisubsSave(request, env) {
                 const [subsHandled, profilesHandled] = await Promise.all([
                     diff.subscriptions
                         ? applyRowLevelDiff(storageAdapter, 'subscriptions', diff.subscriptions)
-                        : false,
+                        : true,
                     diff.profiles
                         ? applyRowLevelDiff(storageAdapter, 'profiles', diff.profiles)
-                        : false,
+                        : true,
                 ]);
 
                 const saveTasks = [];

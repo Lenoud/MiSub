@@ -10,3 +10,8 @@ functions/modules/subscription/template-parsers/ini-template-parser.js
 functions/modules/subscription/template-renderers/render-clash.js
 tests/unit/mihomo-dialer-proxy.test.js
 docs/examples/custom-rules-template.md
+functions/modules/api-handler.js
+functions/modules/profile-id-migration.js
+functions/modules/subscription/main-handler.js
+tests/unit/api-handler-storage-helpers.test.js
+tests/unit/profile-id-migration.test.js

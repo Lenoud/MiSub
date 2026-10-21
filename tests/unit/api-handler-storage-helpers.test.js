@@ -243,6 +243,33 @@ describe('api-handler storage helper usage', () => {
         );
     });
 
+    it.each(['subscriptions', 'profiles'])(
+        '单独保存 %s 时不会重新写入另一集合的旧主行',
+        async (collection) => {
+            const { handleMisubsSave } = await import('../../functions/modules/api-handler.js');
+            getAllSubscriptions.mockResolvedValue([]);
+            getAllProfiles.mockResolvedValue([]);
+            get.mockResolvedValue({});
+            const item =
+                collection === 'subscriptions'
+                    ? { id: 'sub-1', name: 'Sub One', url: 'vless://test@example.com:443' }
+                    : { id: 'group-1', name: 'Profile One', manualNodes: [], subscriptions: [] };
+            const response = await handleMisubsSave(
+                {
+                    json: async () => ({
+                        diff: { [collection]: { added: [item], updated: [], removed: [] } },
+                    }),
+                },
+                { MISUB_DB: {} }
+            );
+            expect(response.status).toBe(200);
+            expect(put).not.toHaveBeenCalledWith('misub_subscriptions_v1', expect.anything());
+            expect(put).not.toHaveBeenCalledWith('misub_profiles_v1', expect.anything());
+            const untouched = collection === 'subscriptions' ? putProfile : putSubscription;
+            expect(untouched).not.toHaveBeenCalled();
+        }
+    );
+
     it('handleMisubsSave full save uses row-level sync when helper APIs are available', async () => {
         const { handleMisubsSave } = await import('../../functions/modules/api-handler.js');
 

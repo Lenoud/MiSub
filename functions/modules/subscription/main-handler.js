@@ -1,15 +1,10 @@
 import { StorageFactory } from '../../storage-adapter.js';
-import {
-    migrateConfigSettings,
-    formatBytes,
-    migrateProfileIds,
-    base64EncodeUtf8,
-} from '../utils.js';
+import { migrateStoredProfileIds } from '../profile-id-migration.js';
+import { migrateConfigSettings, formatBytes, base64EncodeUtf8 } from '../utils.js';
 import { generateCombinedNodeList } from '../../services/subscription-service.js';
 import { sendEnhancedTgNotification, tgEscape } from '../notifications.js';
 import {
     KV_KEY_SUBS,
-    KV_KEY_PROFILES,
     KV_KEY_SETTINGS,
     DEFAULT_SETTINGS as defaultSettings,
     DEFAULT_SUBCONVERTER_BACKEND,
@@ -548,21 +543,14 @@ export async function handleMisubRequest(context) {
         await StorageFactory.getStorageType(env)
     );
     context.storage = storageAdapter;
-    const [settingsData, allMisubs, allProfiles] = await Promise.all([
+    const [settingsData, allMisubs, rawProfiles] = await Promise.all([
         storageAdapter.get(KV_KEY_SETTINGS),
         storageAdapter.getAllSubscriptions(),
         storageAdapter.getAllProfiles(),
     ]);
     const settings = settingsData || {};
 
-    // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
-    if (migrateProfileIds(allProfiles)) {
-        storageAdapter
-            .put(KV_KEY_PROFILES, allProfiles)
-            .catch((err) =>
-                console.error('[Migration] Failed to persist migrated profile IDs:', err)
-            );
-    }
+    const allProfiles = await migrateStoredProfileIds(storageAdapter, rawProfiles);
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings({ ...defaultSettings, ...settings });
     context.config = config;
