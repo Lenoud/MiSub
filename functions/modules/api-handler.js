@@ -52,6 +52,36 @@ function normalizeProfile(profile = {}) {
     return normalized;
 }
 
+// 旧页面可能没有加载新增字段。遗漏时保留现值，显式空字符串或空数组仍可清除。
+async function preserveProfileExtensions(storageAdapter, profiles) {
+    const fields = ['customDnsOverride', 'dialerProxies'];
+    let fallbackProfiles;
+    return Promise.all(
+        profiles.map(async (profile) => {
+            const missing = fields.filter((key) => !Object.hasOwn(profile, key));
+            if (!profile.id || !missing.length) return profile;
+            let existing;
+            if (typeof storageAdapter.getProfileById === 'function') {
+                existing = await storageAdapter.getProfileById(profile.id);
+            } else {
+                fallbackProfiles ||=
+                    typeof storageAdapter.getAllProfiles === 'function'
+                        ? storageAdapter.getAllProfiles()
+                        : storageAdapter.get(KV_KEY_PROFILES);
+                existing = ((await fallbackProfiles) || []).find((item) => item.id === profile.id);
+            }
+            return {
+                ...Object.fromEntries(
+                    missing
+                        .filter((key) => existing && Object.hasOwn(existing, key))
+                        .map((key) => [key, existing[key]])
+                ),
+                ...profile,
+            };
+        })
+    );
+}
+
 async function attachProfileDownloadCounts(storageAdapter, profiles) {
     if (!Array.isArray(profiles) || profiles.length === 0) return profiles;
 
@@ -339,6 +369,7 @@ export async function handleMisubsSave(request, env) {
         }
 
         if (Array.isArray(finalProfiles)) {
+            finalProfiles = await preserveProfileExtensions(storageAdapter, finalProfiles);
             finalProfiles = finalProfiles.map((p, index) => ({
                 ...normalizeProfile(p),
                 sortIndex: index,
@@ -348,15 +379,11 @@ export async function handleMisubsSave(request, env) {
             if (diff?.profiles) {
                 const profileMap = new Map(finalProfiles.map((p) => [p.id, p]));
                 if (diff.profiles.added)
-                    diff.profiles.added = diff.profiles.added.map((p) => ({
-                        ...p,
-                        sortIndex: profileMap.get(p.id)?.sortIndex,
-                    }));
+                    diff.profiles.added = diff.profiles.added.map((p) => profileMap.get(p.id) || p);
                 if (diff.profiles.updated)
-                    diff.profiles.updated = diff.profiles.updated.map((p) => ({
-                        ...p,
-                        sortIndex: profileMap.get(p.id)?.sortIndex,
-                    }));
+                    diff.profiles.updated = diff.profiles.updated.map(
+                        (p) => profileMap.get(p.id) || p
+                    );
             }
         }
 

@@ -324,4 +324,102 @@ describe('api-handler storage helper usage', () => {
             '[API] Cleared 0 node caches after subscription update, preserved 0'
         );
     });
+
+    it.each(['full', 'diff'])('旧页面通过 %s 保存名称时保留独立 DNS 和前置设置', async (mode) => {
+        const { handleMisubsSave } = await import('../../functions/modules/api-handler.js');
+        const existing = {
+            id: 'p1',
+            name: '旧名称',
+            manualNodes: ['edge', 'entry'],
+            subscriptions: [],
+            customDnsOverride: '{"nameserver":["https://1.1.1.1/dns-query"]}',
+            dialerProxies: [{ nodeId: 'edge', viaNodeId: 'entry' }],
+        };
+        getAllSubscriptions.mockResolvedValue([]);
+        getAllProfiles.mockResolvedValue([existing]);
+        const incoming = {
+            id: 'p1',
+            name: 'SKYRIS',
+            manualNodes: ['edge', 'entry'],
+            subscriptions: [],
+        };
+        const body =
+            mode === 'full'
+                ? { misubs: [], profiles: [incoming] }
+                : { diff: { profiles: { added: [], updated: [incoming], removed: [] } } };
+        const response = await handleMisubsSave({ json: async () => body }, { MISUB_DB: {} });
+        const data = await response.json();
+        expect(response.status).toBe(200);
+        expect(putProfile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'SKYRIS',
+                customDnsOverride: existing.customDnsOverride,
+                dialerProxies: existing.dialerProxies,
+            })
+        );
+        expect(data.data.profiles[0]).toMatchObject({
+            name: 'SKYRIS',
+            customDnsOverride: existing.customDnsOverride,
+            dialerProxies: existing.dialerProxies,
+        });
+    });
+
+    it('新页面明确清空前置和 DNS 时允许清除', async () => {
+        const { handleMisubsSave } = await import('../../functions/modules/api-handler.js');
+        getAllSubscriptions.mockResolvedValue([]);
+        getAllProfiles.mockResolvedValue([
+            {
+                id: 'p1',
+                dialerProxies: [{ nodeId: 'edge', viaNodeId: 'entry' }],
+                customDnsOverride: 'old',
+            },
+        ]);
+        const response = await handleMisubsSave(
+            {
+                json: async () => ({
+                    misubs: [],
+                    profiles: [
+                        {
+                            id: 'p1',
+                            name: 'SKYRIS',
+                            manualNodes: [],
+                            subscriptions: [],
+                            customDnsOverride: '',
+                            dialerProxies: [],
+                        },
+                    ],
+                }),
+            },
+            { MISUB_DB: {} }
+        );
+        expect(response.status).toBe(200);
+        expect(putProfile).toHaveBeenCalledWith(
+            expect.objectContaining({ customDnsOverride: '', dialerProxies: [] })
+        );
+    });
+
+    it('旧页面补齐字段时读取当前单行，避免沿用集合缓存中的陈旧值', async () => {
+        const { handleMisubsSave } = await import('../../functions/modules/api-handler.js');
+        const existing = {
+            id: 'p1',
+            name: '原名称',
+            customDnsOverride: 'https-dns',
+            dialerProxies: [{ nodeId: 'edge', viaNodeId: 'entry' }],
+        };
+        getAllSubscriptions.mockResolvedValue([]);
+        getAllProfiles.mockResolvedValue([{ id: 'p1', name: '集合缓存' }]);
+        createAdapter().getProfileById = vi.fn().mockResolvedValue(existing);
+        const response = await handleMisubsSave(
+            { json: async () => ({ misubs: [], profiles: [{ id: 'p1', name: 'SKYRIS' }] }) },
+            { MISUB_DB: {} }
+        );
+        expect(response.status).toBe(200);
+        expect(putProfile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'SKYRIS',
+                customDnsOverride: existing.customDnsOverride,
+                dialerProxies: existing.dialerProxies,
+            })
+        );
+    });
 });
