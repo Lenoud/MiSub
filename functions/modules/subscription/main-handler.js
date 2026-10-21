@@ -1122,7 +1122,8 @@ export async function handleMisubRequest(context) {
                         ? config.regionOverrides
                         : [],
                     isMeta: isMetaCore(userAgentHeader, url.searchParams),
-                    customDnsOverride: config.customDnsOverride || '',
+                    customDnsOverride:
+                        currentProfile?.customDnsOverride || config.customDnsOverride || '',
                     dnsMode:
                         url.searchParams.get('dns-mode') ||
                         url.searchParams.get('dnsMode') ||
@@ -1291,7 +1292,7 @@ export async function handleMisubRequest(context) {
         ruleLevel: ruleLevel, // 统一后的规则等级
         regionOverrides: Array.isArray(config.regionOverrides) ? config.regionOverrides : [],
         isMeta: isMetaCore(userAgentHeader, url.searchParams),
-        customDnsOverride: config.customDnsOverride || '',
+        customDnsOverride: currentProfile?.customDnsOverride || config.customDnsOverride || '',
         dnsMode:
             url.searchParams.get('dns-mode') ||
             url.searchParams.get('dnsMode') ||
