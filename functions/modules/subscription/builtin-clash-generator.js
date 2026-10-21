@@ -236,7 +236,13 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
                 'subscription-url': options.managedConfigUrl || '',
             },
 
-            'proxy-groups': proxyGroups,
+            'proxy-groups': proxyGroups.map(({ options: groupOptions, ...group }) => ({
+                ...group,
+                ...(['url-test', 'fallback'].includes(group.type)
+                    ? { url: 'http://www.gstatic.com/generate_204', interval: 300, tolerance: 50 }
+                    : {}),
+                ...groupOptions,
+            })),
             ...(Object.keys(ruleProviders).length ? { 'rule-providers': ruleProviders } : {}),
             rules: clashRules,
         };

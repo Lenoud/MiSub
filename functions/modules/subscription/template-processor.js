@@ -1,5 +1,10 @@
 import { groupNodeLinesByRegion } from './region-groups.js';
-import { AI_SERVICE_RULES } from './builtin-rules-provider.js';
+import {
+    AI_SERVICE_RULES,
+    AUTO_SELECT_GROUP,
+    FALLBACK_GROUP,
+    MANUAL_SELECT_GROUP,
+} from './builtin-rules-provider.js';
 import { DNS_PROXY_GROUP } from './safe-dns.js';
 
 /**
@@ -245,19 +250,8 @@ function proxyOnlyMembers(members) {
 
 function ensureAiPolicy(model) {
     const aiGroups = model.groups.filter((group) => isAiGroupName(group.name));
-    const mainGroup = model.groups.find(
-        (group) => !isAiGroupName(group.name) && /选择|proxy|default|global|main/i.test(group.name)
-    );
-    const fallbackMembers = proxyOnlyMembers(mainGroup?.members);
-    const preferredMembers = proxyOnlyMembers(aiGroups[0]?.members);
     const nodeMembers = model.proxies.map((proxy) => proxy.name || proxy.tag).filter(Boolean);
-    const aiMembers = Array.from(
-        new Set([
-            ...(preferredMembers.length > 0 ? preferredMembers : fallbackMembers),
-            ...(preferredMembers.length > 0 || fallbackMembers.length > 0 ? [] : nodeMembers),
-        ])
-    );
-    const nodeCandidates = aiMembers.length > 0 ? aiMembers : ['REJECT'];
+    const nodeCandidates = nodeMembers.length > 0 ? nodeMembers : ['REJECT'];
 
     aiGroups.forEach((group) => {
         group.members = proxyOnlyMembers(group.members);
@@ -265,31 +259,31 @@ function ensureAiPolicy(model) {
     });
 
     const existingNames = new Set(model.groups.map((group) => group.name));
-    if (!existingNames.has('🤖 AI 自动')) {
+    for (const [name, type] of [
+        [AUTO_SELECT_GROUP, 'url-test'],
+        [FALLBACK_GROUP, 'fallback'],
+        [MANUAL_SELECT_GROUP, 'select'],
+    ]) {
+        if (existingNames.has(name)) continue;
         model.groups.push({
-            name: '🤖 AI 自动',
-            type: 'url-test',
+            name,
+            type,
             members: nodeCandidates,
             filters: [],
-            options: { url: 'http://www.gstatic.com/generate_204', interval: 300, tolerance: 50 },
+            options:
+                type === 'select'
+                    ? {}
+                    : { url: 'http://www.gstatic.com/generate_204', interval: 300, tolerance: 50 },
         });
-        existingNames.add('🤖 AI 自动');
+        existingNames.add(name);
     }
-    if (!existingNames.has('🤖 AI 故障转移')) {
-        model.groups.push({
-            name: '🤖 AI 故障转移',
-            type: 'fallback',
-            members: nodeCandidates,
-            filters: [],
-            options: { url: 'http://www.gstatic.com/generate_204', interval: 300, tolerance: 50 },
-        });
-        existingNames.add('🤖 AI 故障转移');
-    }
+    const regionNames = groupNodeLinesByRegion(model.proxies).map((region) => region.name);
+    const candidates = [AUTO_SELECT_GROUP, FALLBACK_GROUP, ...regionNames, MANUAL_SELECT_GROUP];
     if (!existingNames.has('🤖 智能 AI')) {
         model.groups.push({
             name: '🤖 智能 AI',
             type: 'select',
-            members: ['🤖 AI 自动', '🤖 AI 故障转移'],
+            members: candidates,
         });
         existingNames.add('🤖 智能 AI');
     }
@@ -299,7 +293,7 @@ function ensureAiPolicy(model) {
             model.groups.push({
                 name: groupName,
                 type: 'select',
-                members: ['🤖 AI 自动', '🤖 AI 故障转移'],
+                members: candidates,
                 filters: [],
                 options: {},
             });

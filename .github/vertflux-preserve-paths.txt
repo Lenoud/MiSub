@@ -22,3 +22,7 @@ src/components/modals/ProfileModal.vue
 src/components/modals/ProfileModal/ProfileDialerProxy.vue
 src/i18n/messages.js
 tests/unit/profile-dialer-proxy.test.js
+functions/modules/subscription/builtin-rules-provider.js
+functions/modules/subscription/builtin-clash-generator.js
+functions/modules/subscription/template-processor.js
+tests/unit/custom-template-and-dns-override.test.js

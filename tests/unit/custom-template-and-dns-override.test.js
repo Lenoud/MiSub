@@ -131,7 +131,10 @@ describe('Custom template isolation & Custom DNS override', () => {
 
         const groupNames = (parsed['proxy-groups'] || []).map((g) => g.name);
         expect(groupNames).toContain(DNS_PROXY_GROUP);
-        expect(groupNames).toContain('🤖 AI 自动');
+        expect(groupNames).toContain('♻️ 自动选择');
+        expect(groupNames).toContain('🔯 故障转移');
+        expect(groupNames).not.toContain('🤖 AI 自动');
+        expect(groupNames).not.toContain('🤖 AI 故障转移');
         expect(groupNames).toContain('🤖 OpenAI');
         expect(parsed.dns.nameserver).toEqual([
             `udp://8.8.8.8:53#${DNS_PROXY_GROUP}`,
