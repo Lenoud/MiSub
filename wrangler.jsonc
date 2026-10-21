@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vertflux-sub",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-21",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "CORS_ORIGINS": "https://sub.vertflux.com,https://vertflux-sub.pages.dev",
+    "MISUB_PUBLIC_URL": "https://sub.vertflux.com",
+    "MISUB_CALLBACK_URL": "https://sub.vertflux.com",
+    "ENABLE_AUTH_DIAGNOSTICS": "false"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "MISUB_KV",
+      "id": "8d4e6bae9078448189cc71146523c720"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "MISUB_DB",
+      "database_name": "vertflux-misub-d1",
+      "database_id": "0fdeb85c-70ab-4635-acfe-4a5156b208b8"
+    }
+  ]
+}
