@@ -16,7 +16,13 @@
 
 Cloudflare KV 绑定为 `MISUB_KV`，D1 绑定为 `MISUB_DB`。D1 保存业务数据，KV 满足上游的认证等兼容需求。
 初始化关闭公开订阅展示，使用独立的订阅 Token；客户端拉取订阅继续使用 MiSub 自身的订阅鉴权。
-管理后台保留 MiSub 原生密码登录，不将浏览器 SSO 放到客户端订阅拉取链路上。
+管理后台及管理 API 使用现有 Casdoor/OAuth2-Proxy 统一认证，允许账号为 `vertflux/liubiao`。
+入口为 `https://sub.vertflux.com/dashboard`，已登录 SSO 后直接进入后台。
+订阅下载、自带 API Key 的外部 API、Cron 和签名回调继续使用 MiSub 原生机器鉴权。
+Pages Functions 中间件验证 SSO 后，仅在当前服务器请求内生成内部 MiSub 会话，不向浏览器下发内部 Cookie。
+原生密码或 Cookie 不能独立访问管理接口；默认 Pages 域名跳转正式入口。
+已知的 SSO 接入前部署会在正式入口验收通过后关闭，当前生产版本会保留。
+退出按钮通过 `/oauth2/sign_out?rd=/signed-out` 清除当前应用的 SSO Cookie。
 
 GitHub Actions 加密 Secret：
 
@@ -27,7 +33,9 @@ GitHub Actions 加密 Secret：
 | `MISUB_COOKIE_SECRET` | 稳定的会话签名密钥 |
 | `MISUB_CRON_SECRET` | 自动任务鉴权密钥 |
 
-应用凭据在正式发布前同步为 Cloudflare Pages 加密 Secret。修改管理员密码应更新 GitHub Secret，下一次发布后生效。
+应用凭据在正式发布前同步为 Cloudflare Pages 加密 Secret。保留原生管理员密码作为应用内部配置，浏览器统一使用 SSO。
+账号访问权限通过 VPS 上的 `/usr/local/sbin/vertflux-auth-site` 和站点清单管理。
+前端使用 `VITE_VERTFLUX_SSO=true` 构建；中间件对正式部署始终强制认证。
 实际凭据、订阅地址及节点私钥不提交到此公开仓库；运行数据独立保存在 Cloudflare 存储中。
 `schema.sql` 只包含可重复执行的建表和建索引语句，发布不会重新初始化或清空业务数据。
 
@@ -36,6 +44,6 @@ GitHub Actions 加密 Secret：
 ```sh
 npm ci --no-audit --no-fund
 npm run test:run
-npm run build
+VITE_VERTFLUX_SSO=true npm run build
 npx --no-install wrangler pages functions build functions --outdir .wrangler/functions-check --compatibility-date 2026-10-21 --compatibility-flags nodejs_compat
 ```

@@ -118,6 +118,10 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     async function logout() {
+        if (import.meta.env.VITE_VERTFLUX_SSO === 'true') {
+            window.location.assign('/oauth2/sign_out?rd=/signed-out');
+            return true;
+        }
         let logoutConfirmed = false;
         try {
             await api.get('/api/logout');

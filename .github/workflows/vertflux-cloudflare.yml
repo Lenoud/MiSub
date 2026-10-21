@@ -37,6 +37,8 @@ jobs:
       - name: 运行测试
         run: npm run test:run
       - name: 构建前端和 Pages Functions
+        env:
+          VITE_VERTFLUX_SSO: 'true'
         run: |
           npm run build
           npx --no-install wrangler pages functions build functions --outdir .wrangler/functions-check --compatibility-date 2026-10-21 --compatibility-flags nodejs_compat
@@ -64,4 +66,11 @@ jobs:
         run: npx --no-install wrangler pages deploy dist --project-name vertflux-sub --branch main --commit-hash "$GITHUB_SHA"
       - name: 验证生产入口
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
-        run: curl --fail --silent --show-error --retry 5 --retry-delay 3 --max-time 30 https://vertflux-sub.pages.dev/login --output /dev/null
+        run: |
+          test "$(curl --silent --show-error --retry 5 --retry-delay 3 --max-time 30 --output /dev/null --write-out '%{http_code}' https://sub.vertflux.com/dashboard)" = 302
+          test "$(curl --silent --show-error --retry 5 --retry-delay 3 --max-time 30 --output /dev/null --write-out '%{http_code}' https://sub.vertflux.com/api/settings)" = 401
+      - name: 关闭接入 SSO 前的历史部署入口
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: python3 .github/scripts/vertflux-close-legacy.py

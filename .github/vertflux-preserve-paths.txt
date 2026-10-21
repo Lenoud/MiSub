@@ -1,3 +1,7 @@
 .github
 wrangler.jsonc
 docs/vertflux-deployment.md
+functions/_middleware.js
+functions/_lib/vertflux-sso.js
+public/_routes.json
+tests/unit/vertflux-sso.test.js

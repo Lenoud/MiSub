@@ -61,6 +61,10 @@
 
         const config = publicConfig.value || {};
         const currentPath = route.path;
+        if (import.meta.env.VITE_VERTFLUX_SSO === 'true' && currentPath === '/login') {
+            window.location.replace('/oauth2/start?rd=' + encodeURIComponent(window.location.origin + '/dashboard'));
+            return;
+        }
 
         // customLoginPath 不再由公开 API 返回；后端只在当前 Referer 是实际登录路径时
         // 返回 isLoginPath=true。未知路径不会被误当成登录页。
