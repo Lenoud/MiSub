@@ -2,6 +2,10 @@
 
 本模板旨在帮助 MiSub 用户理解并编写自定义分流规则。你可以将此内容作为参考，编写自己的 `.ini` 格式模板或在 MiSub 的内置引擎中使用。
 
+Vertflux 当前 Standard 分流的可编辑副本见 [标准分流模板](./vertflux-standard-described.ini)。它保留策略组中的简短说明、规则顺序、隐藏的 DNS 与地区测速组，以及 300 秒测速间隔和 50 ms 容差。模板按当前的美国、香港地区配置，节点从订阅组动态读取，前置代理仍在订阅组中管理。这是一份独立副本，后续编辑不会改动内置默认规则。
+
+Clash 订阅会在常用策略组名中显示括号说明，例如 `自动选择（低延迟优先）`。自动选择根据探测 URL 的延迟选节点；故障转移按节点顺序选首个可用节点；节点选择由用户手动选择策略；手动切换固定选择一个节点。它们都不能保证节点对每个目标网站的访问结果。
+
 ---
 
 ## 💡 核心概念
@@ -33,7 +37,7 @@ DOMAIN-SUFFIX,t.me,♻️ 自动选择
 DOMAIN-SUFFIX,tdesktop.com,♻️ 自动选择
 DOMAIN-KEYWORD,telegram,♻️ 自动选择
 
-# === 2. 智能 AI 服务 (AI Services) ===
+# === 2. AI 服务分流 (AI Services) ===
 # 强制使用美国节点以确保 ChatGPT 可用
 DOMAIN-SUFFIX,openai.com,🇺🇸 美国节点
 DOMAIN-SUFFIX,anthropic.com,🇺🇸 美国节点
@@ -68,7 +72,7 @@ DOMAIN-SUFFIX,githubusercontent.com,🚀 节点选择
 # MiSub 支持直接引用内置定义的远程规则集，这可以极大精简你的配置文件。
 # 语法: RULE-SET, 标识符, 策略组
 RULE-SET,ADS,REJECT         # 引用内置广告规则集并拦截
-RULE-SET,AI,🤖 智能 AI        # 引用内置 AI 规则集
+RULE-SET,AI,🤖 OpenAI 补充服务 # 引用内置 OpenAI 补充规则集
 RULE-SET,STREAM,🎥 流媒体     # 引用内置流媒体规则集
 
 # === 7. 地区绕过 (GeoIP) ===

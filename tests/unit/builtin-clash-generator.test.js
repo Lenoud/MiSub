@@ -142,7 +142,7 @@ describe('Clash 内置生成器', () => {
         );
 
         for (const name of [
-            '🤖 智能 AI',
+            '🤖 OpenAI 补充服务',
             '🤖 OpenAI',
             '🤖 Claude',
             '🤖 Gemini',

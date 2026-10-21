@@ -74,6 +74,8 @@ MATCH,MyGroup
 
         expect(result.contentType).toBe('application/x-yaml; charset=utf-8');
         expect(result.content).toContain('proxies:');
+        expect(result.content).toContain('name: ♻️ 自动选择（低延迟优先）');
+        expect(result.content).toContain('MATCH,🚀 节点选择（手动选策略）');
         expect(fetch).not.toHaveBeenCalled();
     });
 

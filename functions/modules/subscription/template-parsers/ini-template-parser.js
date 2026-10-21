@@ -1,6 +1,30 @@
 import { createUnifiedTemplateModel } from '../template-model.js';
 import { pinRemoteRuleUrl } from '../builtin-rules-provider.js';
 
+function parseGroupOption(key, rawValue) {
+    const value = String(rawValue || '').trim();
+    // 保留 Clash 对开关与数值的类型要求，避免 hidden="false" 仍被当作真值。
+    if (
+        [
+            'hidden',
+            'lazy',
+            'disable-udp',
+            'include-all',
+            'include-all-proxies',
+            'include-all-providers',
+        ].includes(key)
+    ) {
+        if (/^(true|false)$/i.test(value)) return value.toLowerCase() === 'true';
+    }
+    if (
+        ['interval', 'tolerance', 'timeout', 'max-failed-times'].includes(key) &&
+        /^\d+$/.test(value)
+    ) {
+        return Number(value);
+    }
+    return value;
+}
+
 function parseIniSections(templateText) {
     const lines = String(templateText || '').split(/\r?\n/);
     const sections = new Map();
@@ -44,7 +68,7 @@ function parseGroupLine(line) {
     for (const part of bodyParts.slice(1)) {
         if (part.includes('=')) {
             const [key, value] = part.split(/=(.*)/, 2);
-            options[key.trim()] = (value || '').trim();
+            options[key.trim()] = parseGroupOption(key.trim(), value);
         } else {
             members.push(part);
         }
@@ -144,6 +168,11 @@ function parseAclProxyGroupLine(line) {
         if (part === '.*' || (part.startsWith('(') && part.endsWith(')'))) {
             const filterValue = part === '.*' ? '.*' : part.slice(1, -1);
             filters.push(filterValue);
+            continue;
+        }
+        const option = part.match(/^([a-z][a-z0-9-]*)=(.*)$/i);
+        if (option) {
+            options[option[1]] = parseGroupOption(option[1], option[2]);
             continue;
         }
         if (part === ',') continue;

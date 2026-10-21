@@ -225,7 +225,8 @@ export function renderClashFromTemplateModel(model) {
             mode: normalizedModel.settings?.dnsMode,
             proxyGroup: DNS_PROXY_GROUP,
         }),
-        proxies: normalizedModel.proxies,
+        // 地区识别的内部元数据不属于 Clash 节点配置，与内置生成器保持一致。
+        proxies: normalizedModel.proxies.map(({ metadata, ...proxy }) => proxy),
         'proxy-groups': normalizedModel.groups
             .filter(
                 (group) =>

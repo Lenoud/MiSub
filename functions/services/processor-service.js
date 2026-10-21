@@ -24,6 +24,7 @@ import {
     applyProfileDialerProxies,
     assertProfileDialerProxyTarget,
 } from '../modules/subscription/profile-dialer-proxy.js';
+import { addClashProxyGroupDescriptions } from '../modules/subscription/proxy-group-descriptions.js';
 
 function getTemplateExtension(templateUrl) {
     const raw = typeof templateUrl === 'string' ? templateUrl.trim() : '';
@@ -292,6 +293,17 @@ export class ProcessorService {
             builtinOptions.profileDialerProxies,
             builtinOptions
         );
+
+        if (
+            targetFormat === 'clash' &&
+            ['none', 'builtin', 'custom'].includes(templateSource.kind) &&
+            !builtinOptions.hiddifyCompatible &&
+            !/hiddify/i.test(builtinOptions.userAgent || '')
+        ) {
+            finalContent = addClashProxyGroupDescriptions(finalContent, {
+                builtinRules: templateSource.kind !== 'custom',
+            });
+        }
 
         return {
             content: finalContent,

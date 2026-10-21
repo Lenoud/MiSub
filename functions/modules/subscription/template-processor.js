@@ -279,13 +279,13 @@ function ensureAiPolicy(model) {
     }
     const regionNames = groupNodeLinesByRegion(model.proxies).map((region) => region.name);
     const candidates = [AUTO_SELECT_GROUP, FALLBACK_GROUP, ...regionNames, MANUAL_SELECT_GROUP];
-    if (!existingNames.has('🤖 智能 AI')) {
+    if (!existingNames.has('🤖 OpenAI 补充服务')) {
         model.groups.push({
-            name: '🤖 智能 AI',
+            name: '🤖 OpenAI 补充服务',
             type: 'select',
             members: candidates,
         });
-        existingNames.add('🤖 智能 AI');
+        existingNames.add('🤖 OpenAI 补充服务');
     }
     AI_SERVICE_RULES.forEach((service) => {
         const groupName = `🤖 ${service.name}`;

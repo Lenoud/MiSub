@@ -59,7 +59,7 @@ export const AI_SERVICE_RULES = Object.freeze([
     },
     {
         id: 'ai-platforms',
-        name: 'AI 平台',
+        name: 'AI 聚合与开发平台',
         domains: [
             'poe.com',
             'character.ai',
@@ -94,7 +94,7 @@ function aiPolicyGroups(proxyNames, regionNames, { relay = false } = {}) {
     if (relay && proxyNames.length > 0) candidates.push('🔗 链式代理', '🚀 常用节点');
 
     return [
-        { name: '🤖 智能 AI', type: 'select', proxies: candidates },
+        { name: '🤖 OpenAI 补充服务', type: 'select', proxies: candidates },
         ...AI_SERVICE_RULES.map((service) => ({
             name: `🤖 ${service.name}`,
             type: 'select',
@@ -551,7 +551,7 @@ export const REMOTE_SOURCES = {
         quanx: `${ACL4SSR_BASE}/Clash/Microsoft.list`,
     },
     AI: {
-        name: '智能 AI',
+        name: 'OpenAI 补充服务',
         clash: `${ACL4SSR_BASE}/Clash/Providers/Ruleset/OpenAi.yaml`,
         singbox: `${SING_GEOSITE_BASE}/geosite-openai.srs`,
         surge: `${ACL4SSR_BASE}/Clash/Ruleset/OpenAi.list`,
@@ -573,7 +573,7 @@ export const REMOTE_SOURCES = {
 export const RULE_SETS = {
     BASE: [
         ...AI_DOMAIN_RULE_LINES,
-        'RULE-SET,AI,🤖 智能 AI',
+        'RULE-SET,AI,🤖 OpenAI 补充服务',
         `DOMAIN-SUFFIX,google.com,${DEFAULT_SELECT_GROUP}`,
         `DOMAIN-KEYWORD,google,${DEFAULT_SELECT_GROUP}`,
         `DOMAIN-SUFFIX,github.com,${DEFAULT_SELECT_GROUP}`,
@@ -583,7 +583,7 @@ export const RULE_SETS = {
     STD: [
         'RULE-SET,ADS,🎬 视频广告',
         ...AI_DOMAIN_RULE_LINES,
-        'RULE-SET,AI,🤖 智能 AI',
+        'RULE-SET,AI,🤖 OpenAI 补充服务',
         'RULE-SET,STREAM,🎥 流媒体',
         'RULE-SET,APPLE,🍎 Apple',
         'RULE-SET,MICROSOFT,Ⓜ️ Microsoft',
@@ -596,7 +596,7 @@ export const RULE_SETS = {
         'RULE-SET,ADS,🎬 视频广告',
         'RULE-SET,SOCIAL,📲 Telegram',
         ...AI_DOMAIN_RULE_LINES,
-        'RULE-SET,AI,🤖 智能 AI',
+        'RULE-SET,AI,🤖 OpenAI 补充服务',
         'RULE-SET,STREAM,🎥 流媒体',
         'RULE-SET,APPLE,🍎 Apple',
         'RULE-SET,MICROSOFT,Ⓜ️ Microsoft',
@@ -608,7 +608,7 @@ export const RULE_SETS = {
     RELAY: [
         'RULE-SET,ADS,🎬 视频广告',
         ...AI_DOMAIN_RULE_LINES,
-        'RULE-SET,AI,🤖 智能 AI',
+        'RULE-SET,AI,🤖 OpenAI 补充服务',
         'RULE-SET,STREAM,🎥 流媒体',
         'RULE-SET,APPLE,🍎 Apple',
         'RULE-SET,MICROSOFT,Ⓜ️ Microsoft',

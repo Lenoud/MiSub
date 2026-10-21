@@ -26,3 +26,10 @@ functions/modules/subscription/builtin-rules-provider.js
 functions/modules/subscription/builtin-clash-generator.js
 functions/modules/subscription/template-processor.js
 tests/unit/custom-template-and-dns-override.test.js
+functions/modules/subscription/proxy-group-descriptions.js
+tests/unit/proxy-group-descriptions.test.js
+tests/unit/custom-rule-templates.test.js
+docs/examples/vertflux-standard-described.ini
+tests/unit/described-standard-template.test.js
+tests/unit/builtin-clash-generator.test.js
+tests/unit/processor-service-render-output.test.js

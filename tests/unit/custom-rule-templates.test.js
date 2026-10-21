@@ -116,7 +116,9 @@ describe('自定义规则模板 Phase 1 后端模型/API/渲染', () => {
         expect(fetch).not.toHaveBeenCalled();
         expect(result.contentType).toBe('application/x-yaml; charset=utf-8');
         const parsed = yaml.load(result.content);
-        expect(parsed['proxy-groups'].some((group) => group.name === '🚀 节点选择')).toBe(true);
-        expect(parsed.rules).toContain('MATCH,🚀 节点选择');
+        expect(
+            parsed['proxy-groups'].some((group) => group.name === '🚀 节点选择（手动选策略）')
+        ).toBe(true);
+        expect(parsed.rules).toContain('MATCH,🚀 节点选择（手动选策略）');
     });
 });
