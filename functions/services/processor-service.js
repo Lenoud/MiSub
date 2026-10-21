@@ -20,6 +20,10 @@ import { base64EncodeUtf8 } from '../modules/utils.js';
 import yaml from 'js-yaml';
 import { urlsToClashProxies } from '../utils/url-to-clash.js';
 import { resolveSafeDnsConfig } from '../modules/subscription/safe-dns.js';
+import {
+    applyProfileDialerProxies,
+    assertProfileDialerProxyTarget,
+} from '../modules/subscription/profile-dialer-proxy.js';
 
 function getTemplateExtension(templateUrl) {
     const raw = typeof templateUrl === 'string' ? templateUrl.trim() : '';
@@ -161,6 +165,12 @@ export class ProcessorService {
             userInfoHeader,
         } = options || {};
 
+        assertProfileDialerProxyTarget(
+            builtinOptions.profileDialerProxies,
+            targetFormat,
+            builtinOptions.isMeta
+        );
+
         // Check for Base64 (simplest case)
         if (targetFormat === 'base64') {
             return {
@@ -177,6 +187,9 @@ export class ProcessorService {
         });
 
         if (!builtinProxyContent) {
+            if (builtinOptions.profileDialerProxies?.length) {
+                throw new Error('前置代理订阅生成失败，已停止输出，避免丢失链路');
+            }
             // Fallback to raw Base64 if generator fails
             return {
                 content: base64EncodeUtf8(combinedNodeList),
@@ -273,6 +286,12 @@ export class ProcessorService {
             else if (targetFormat === 'singbox' || targetFormat === 'sing-box')
                 contentType = 'application/json; charset=utf-8';
         }
+
+        finalContent = applyProfileDialerProxies(
+            finalContent,
+            builtinOptions.profileDialerProxies,
+            builtinOptions
+        );
 
         return {
             content: finalContent,

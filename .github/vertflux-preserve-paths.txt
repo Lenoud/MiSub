@@ -15,3 +15,10 @@ functions/modules/profile-id-migration.js
 functions/modules/subscription/main-handler.js
 tests/unit/api-handler-storage-helpers.test.js
 tests/unit/profile-id-migration.test.js
+shared/profile-dialer-proxy.js
+functions/modules/subscription/profile-dialer-proxy.js
+functions/services/processor-service.js
+src/components/modals/ProfileModal.vue
+src/components/modals/ProfileModal/ProfileDialerProxy.vue
+src/i18n/messages.js
+tests/unit/profile-dialer-proxy.test.js

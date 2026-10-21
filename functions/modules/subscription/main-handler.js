@@ -45,6 +45,10 @@ import {
 } from './template-pipeline.js';
 import { getBuiltinTemplate } from './builtin-template-registry.js';
 import { assertPublicNetworkUrl } from '../security-utils.js';
+import {
+    resolveProfileDialerProxies,
+    assertProfileDialerProxyTarget,
+} from './profile-dialer-proxy.js';
 
 function maskSensitiveLogValue(value) {
     const text = String(value ?? '');
@@ -799,6 +803,26 @@ export async function handleMisubRequest(context) {
     });
     const isExternalMode = effectiveEngine === 'external';
     const useBuiltin = !isExternalMode;
+    let profileDialerProxies = [];
+    if (!isProfileExpired) {
+        try {
+            profileDialerProxies = resolveProfileDialerProxies(currentProfile, targetMisubs);
+            assertProfileDialerProxyTarget(
+                profileDialerProxies,
+                targetFormat,
+                isMetaCore(userAgentHeader, url.searchParams),
+                isExternalMode
+            );
+        } catch (error) {
+            return new Response(error.message, {
+                status: 400,
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
+    }
     const { shouldSkipCertificateVerify, shouldEnableUdp } = resolveBuiltinEngineFlags(
         config,
         isExternalMode
@@ -1284,6 +1308,7 @@ export async function handleMisubRequest(context) {
             userAgent: userAgentHeader,
         }),
         fileName: subName,
+        profileDialerProxies,
         managedConfigUrl: '',
         interval: config.UpdateInterval || 86400,
         skipCertVerify: finalSkipCertVerify,
@@ -1404,6 +1429,18 @@ export async function handleMisubRequest(context) {
             return new Response(finalContent || '', { headers: responseHeaders });
         } catch (e) {
             console.error(`[Builtin${targetFormat}] Generation failed:`, e);
+            if (profileDialerProxies.length) {
+                return new Response(
+                    '前置代理订阅生成失败，请检查节点和前置设置；已停止输出，避免丢失链路。',
+                    {
+                        status: 422,
+                        headers: {
+                            'Content-Type': 'text/plain; charset=utf-8',
+                            'Cache-Control': 'no-store',
+                        },
+                    }
+                );
+            }
         }
     }
 

@@ -1,5 +1,22 @@
 export const messages = {
     'zh-CN': {
+        profileDialerProxy: {
+            title: '节点前置代理',
+            engine: '已设置前置代理，请使用内置引擎。',
+            hint: '在本订阅组内为手动节点指定前置，修改后保存并在客户端更新订阅。支持 Clash Verge Rev / Mihomo，选择前置会启用内置引擎。',
+            empty: '请先在上方选择手动节点。',
+            via: '前置节点',
+            direct: '直连（无前置）',
+            unavailable: '原前置节点已取消选择或停用',
+            client: '客户端',
+            destination: '目标网站',
+            invalid: '前置代理配置格式无效',
+            missing:
+                '落地节点和前置节点都必须已启用，并被选入本订阅组；请恢复节点或清除对应前置设置。',
+            self: '节点不能将自身作为前置代理。',
+            duplicate: '同一节点只能配置一个前置代理。',
+            cycle: '前置代理存在循环引用，请调整后保存。',
+        },
         app: {
             name: 'MiSub',
             home: '首页',
@@ -1767,6 +1784,23 @@ export const messages = {
         },
     },
     'en-US': {
+        profileDialerProxy: {
+            title: 'Node upstream proxy',
+            engine: 'Use the builtin engine when upstream proxies are configured.',
+            hint: 'Choose an upstream for manual nodes in this profile. Save, then refresh the client subscription. Supports Clash Verge Rev / Mihomo; selecting an upstream enables the builtin engine.',
+            empty: 'Select manual nodes above first.',
+            via: 'Upstream node',
+            direct: 'Direct (no upstream)',
+            unavailable: 'Previous upstream is deselected or disabled',
+            client: 'Client',
+            destination: 'Destination',
+            invalid: 'Invalid upstream proxy settings.',
+            missing:
+                'Both nodes must be enabled and selected in this profile. Restore the nodes or clear the upstream setting.',
+            self: 'A node cannot use itself as an upstream.',
+            duplicate: 'A node can have only one upstream.',
+            cycle: 'Upstream settings contain a cycle. Adjust them before saving.',
+        },
         app: {
             name: 'MiSub',
             home: 'Home',

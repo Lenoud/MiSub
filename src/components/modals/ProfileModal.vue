@@ -4,6 +4,9 @@
     import ProfileForm from './ProfileModal/ProfileForm.vue';
     import SubscriptionSelector from './ProfileModal/SubscriptionSelector.vue';
     import NodeSelector from './ProfileModal/NodeSelector.vue';
+    import ProfileDialerProxy from './ProfileModal/ProfileDialerProxy.vue';
+    import { getProfileDialerProxyError } from '../../../shared/profile-dialer-proxy.js';
+    import { useToastStore } from '../../stores/toast.js';
     import { useManualNodes } from '../../composables/useManualNodes.js';
     import { useDataStore } from '../../stores/useDataStore.js';
     import { useSettingsStore } from '../../stores/settings.js';
@@ -13,6 +16,7 @@
     const { t } = useI18n();
     const dataStore = useDataStore();
     const settingsStore = useSettingsStore();
+    const { showToast } = useToastStore();
     const { manualNodeGroups } = useManualNodes(dataStore.markDirty);
 
     const props = defineProps({
@@ -264,6 +268,11 @@
     );
 
     const handleConfirm = () => {
+        const dialerError = getProfileDialerProxyError(localProfile.value, props.allManualNodes);
+        if (dialerError) {
+            showToast(t(`profileDialerProxy.${dialerError}`), 'error');
+            return;
+        }
         const profileToSave = JSON.parse(JSON.stringify(localProfile.value));
         if (profileToSave.expiresAt) {
             try {
@@ -386,6 +395,7 @@
                         @deselect-all="handleDeselectAll('manualNodes', filteredManualNodes)"
                     />
                 </div>
+                <ProfileDialerProxy :local-profile="localProfile" :nodes="allManualNodes || []" />
             </div>
         </template>
     </Modal>
