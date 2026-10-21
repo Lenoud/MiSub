@@ -192,6 +192,18 @@ export function parseIniTemplate(templateText, options = {}) {
         .filter((line) => /^custom_chain_proxy=/i.test(line.trim()))
         .map(parseChainProxyLine)
         .filter(Boolean);
+    const parsedDialerProxy = aclCustomLines
+        .filter((line) => /^custom_dialer_proxy=/i.test(line.trim()))
+        .map((line) => {
+            const parts = line
+                .trim()
+                .replace(/^custom_dialer_proxy=/i, '')
+                .split('`');
+            if (parts.length !== 2 || parts.some((part) => !part.trim())) {
+                throw new Error('custom_dialer_proxy 需要落地节点和前置节点两个名称正则');
+            }
+            return { filter: parts[0].trim(), entryFilter: parts[1].trim() };
+        });
 
     const groups = (sections.get('proxy group') || [])
         .map(parseGroupLine)
@@ -223,6 +235,9 @@ export function parseIniTemplate(templateText, options = {}) {
             customDnsOverride: options.customDnsOverride || '',
             dnsMode: options.dnsMode || 'clean',
         },
-        extras: parsedChainProxy.length > 0 ? { chainProxy: parsedChainProxy } : {},
+        extras: {
+            ...(parsedChainProxy.length > 0 ? { chainProxy: parsedChainProxy } : {}),
+            ...(parsedDialerProxy.length > 0 ? { dialerProxy: parsedDialerProxy } : {}),
+        },
     });
 }

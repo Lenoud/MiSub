@@ -5,3 +5,8 @@ functions/_middleware.js
 functions/_lib/vertflux-sso.js
 public/_routes.json
 tests/unit/vertflux-sso.test.js
+functions/modules/subscription/mihomo-dialer-proxy.js
+functions/modules/subscription/template-parsers/ini-template-parser.js
+functions/modules/subscription/template-renderers/render-clash.js
+tests/unit/mihomo-dialer-proxy.test.js
+docs/examples/custom-rules-template.md

@@ -115,6 +115,25 @@ MiSub 会据此展开：
 
 ---
 
+## 只为指定节点设置前置代理
+
+如果只有部分节点需要前置，使用 `custom_dialer_proxy`。两个参数分别是落地节点和前置节点的名称正则，匹配包含前缀、旗帜的最终名称。前置必须恰好匹配一条节点。
+
+```ini
+[custom]
+custom_proxy_group=节点选择`select`.*
+custom_dialer_proxy=sky-edge-node01$`sky-cheyonserver$
+
+[Rule]
+MATCH,节点选择
+```
+
+这会在原 `sky-edge-node01` 节点上设置 `dialer-proxy`，链路为客户端 → `sky-cheyonserver` → `sky-edge-node01` → 目标网站。其他节点保持原有连接方式，节点数量和名称均保留。
+
+该配置用于 Clash Verge Rev 等 Mihomo 客户端，订阅链接应包含 `target=clash&meta=1`。节点未匹配、前置不唯一、自身前置或循环引用均会停止模板生成，不会输出省略前置的 Clash 配置。
+
+---
+
 ## 🚀 如何在 GitHub 上使用
 
 1.  将上述规则保存为 `my-rules.list` 或直接集成到你的 `.ini` 模板文件中。

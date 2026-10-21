@@ -3,6 +3,7 @@ import { clashFix } from '../../../utils/format-utils.js';
 import { normalizeUnifiedTemplateModel } from '../template-model.js';
 import { DNS_PROXY_GROUP, resolveSafeDnsConfig } from '../safe-dns.js';
 import { applyMihomoChainProxy } from '../mihomo-chain-proxy.js';
+import { applyMihomoDialerProxy } from '../mihomo-dialer-proxy.js';
 
 function mapGroupType(type) {
     const normalized = String(type || '')
@@ -171,6 +172,7 @@ export function renderClashFromTemplateModel(model) {
             enableDialerProxy: Boolean(normalizedModel.meta?.isMeta),
         });
     }
+    applyMihomoDialerProxy(normalizedModel);
 
     const ruleProviders = {};
     const ruleProviderMap = new Map();
