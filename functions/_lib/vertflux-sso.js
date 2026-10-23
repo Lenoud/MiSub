@@ -71,7 +71,7 @@ export function createVertfluxSso({
         try {
             const started = Date.now();
             const response = await fetchAuth(`${AUTH}/edge/sub${pathname}${search}`, {
-                headers: { Cookie: ssoCookies(request), Accept: 'text/html' },
+                headers: { Cookie: ssoCookies(request), Accept: 'text/html', 'X-Request-ID': audit.request_id },
                 redirect: 'manual',
                 signal: AbortSignal.timeout(15000),
             });
@@ -153,7 +153,7 @@ export function createVertfluxSso({
             try {
                 const started = Date.now();
                 const response = await fetchAuth(`${AUTH}/api/session?app=${HOST}`, {
-                    headers: { Cookie: cookies, Accept: 'application/json' },
+                    headers: { Cookie: cookies, Accept: 'application/json', 'X-Request-ID': audit.request_id },
                     redirect: 'manual',
                     signal: AbortSignal.timeout(15000),
                 });
