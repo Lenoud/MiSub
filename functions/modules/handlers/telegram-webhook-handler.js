@@ -111,7 +111,7 @@ async function getTelegramPushConfig(env, cache = null) {
         : env.TELEGRAM_PUSH_ALLOWED_USERS?.split(',') || [];
 
     return {
-        enabled: config.enabled ?? true,
+        enabled: config.enabled ?? Boolean(config.bot_token || env.TELEGRAM_PUSH_BOT_TOKEN),
         bot_token: config.bot_token || env.TELEGRAM_PUSH_BOT_TOKEN,
         webhook_secret: config.webhook_secret || env.TELEGRAM_PUSH_WEBHOOK_SECRET,
         allowed_user_ids: allowedUserIds.map((id) => id?.toString().trim()).filter(Boolean),

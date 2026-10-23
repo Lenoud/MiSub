@@ -1,3 +1,4 @@
+import { auditGateway, callbackError, invalidPath, blockedProbe } from './gateway-audit.js';
 import { SettingsCache } from '../storage-adapter.js';
 import { createSignedToken } from '../modules/auth-middleware.js';
 
@@ -66,20 +67,29 @@ export function createVertfluxSso({
     fetchAuth = (...args) => fetch(...args),
     readSettings = (env) => SettingsCache.get(env),
 } = {}) {
-    async function oauth(request, pathname, search) {
+    async function oauth(request, pathname, search, audit) {
         try {
-            return await fetchAuth(`${AUTH}/edge/sub${pathname}${search}`, {
+            const started = Date.now();
+            const response = await fetchAuth(`${AUTH}/edge/sub${pathname}${search}`, {
                 headers: { Cookie: ssoCookies(request), Accept: 'text/html' },
                 redirect: 'manual',
                 signal: AbortSignal.timeout(15000),
             });
+            audit.upstream_status = response.status;
+            audit.upstream_duration_ms = Date.now() - started;
+            if (response.status >= 500) {
+                audit.reason = 'oauth_upstream_error';
+                return error(503, '统一认证暂时不可用，请稍后再试。');
+            }
+            return response;
         } catch {
+            audit.reason = 'oauth_network_error';
             return error(503, '统一认证暂时不可用，请稍后再试。');
         }
     }
 
-    return async function guard(context) {
-        const { request, env, next } = context;
+    const guarded = auditGateway(HOST, async (request, env, audit, context) => {
+        const { next } = context;
         const url = new URL(request.url);
         const safe = ['GET', 'HEAD'].includes(request.method);
         if (url.hostname !== HOST || url.protocol !== 'https:') {
@@ -93,6 +103,8 @@ export function createVertfluxSso({
         } catch {
             return error(400, '请求路径无效。');
         }
+        if (invalidPath(path)) return error(400, '请求路径无效。');
+        if (blockedProbe(path)) return error(404, '入口不存在。');
         if (url.pathname.startsWith('/oauth2/')) {
             if (!['/oauth2/start', '/oauth2/callback', '/oauth2/sign_out'].includes(url.pathname))
                 return error(404, '入口不存在。');
@@ -106,7 +118,14 @@ export function createVertfluxSso({
             } catch {
                 return error(400, '登录后的返回地址无效。');
             }
-            return privateResponse(await oauth(request, url.pathname, url.search));
+            const callbackStatus = callbackError(request);
+            if (callbackStatus) {
+                audit.auth_result = 'denied';
+                audit.reason = callbackStatus === 400 ? 'oauth_callback_parameters_missing' : 'oauth_csrf_cookie_missing';
+                return error(callbackStatus, '登录回调无效，请重新登录。');
+            }
+            audit.auth_result = 'oauth';
+            return privateResponse(await oauth(request, url.pathname, url.search, audit));
         }
         if (url.pathname === '/signed-out') {
             return privateResponse(
@@ -127,27 +146,38 @@ export function createVertfluxSso({
         )
             return error(403, '当前操作必须从应用页面发起。');
 
+        audit.auth_result = 'required';
         const cookies = ssoCookies(request);
         let identity;
         if (cookies) {
             try {
+                const started = Date.now();
                 const response = await fetchAuth(`${AUTH}/api/session?app=${HOST}`, {
                     headers: { Cookie: cookies, Accept: 'application/json' },
                     redirect: 'manual',
                     signal: AbortSignal.timeout(15000),
                 });
-                if (response.status === 403) return error(403, '当前账号没有访问该应用的权限。');
+                audit.upstream_status = response.status;
+                audit.upstream_duration_ms = Date.now() - started;
+                if (response.status === 403) {
+                    audit.auth_result = 'denied'; audit.reason = 'application_permission_denied';
+                    return error(403, '当前账号没有访问该应用的权限。');
+                }
                 if (response.ok) {
                     identity = await response.json();
                     if (!identity?.subject || !identity?.username)
                         return error(503, '统一认证返回的身份信息不完整。');
-                } else if (response.status !== 401)
+                } else if (response.status !== 401) {
+                    audit.reason = 'session_upstream_error';
                     return error(503, '统一认证暂时不可用，请稍后再试。');
+                }
             } catch {
+                audit.reason = 'session_network_error';
                 return error(503, '统一认证暂时不可用，请稍后再试。');
             }
         }
         if (!identity) {
+            audit.auth_result = 'denied'; audit.reason = 'login_required';
             const loginUrl = `/oauth2/start?rd=${encodeURIComponent(url.href)}`;
             if (
                 path.startsWith('/api/') ||
@@ -160,8 +190,9 @@ export function createVertfluxSso({
             }
             return privateResponse(Response.redirect(`${ORIGIN}${loginUrl}`, 302));
         }
+        audit.auth_result = 'allowed';
         if (path === '/api/logout') {
-            const response = await oauth(request, '/oauth2/sign_out', '?rd=/signed-out');
+            const response = await oauth(request, '/oauth2/sign_out', '?rd=/signed-out', audit);
             if (![200, 302].includes(response.status))
                 return error(503, '退出统一认证失败，请稍后再试。');
             const headers = new Headers(response.headers);
@@ -187,6 +218,7 @@ export function createVertfluxSso({
         }
         if (!env.COOKIE_SECRET) return error(503, '应用的内部认证尚未配置。');
         const headers = applicationHeaders(request);
+        headers.set('X-Vertflux-Request-ID', audit.request_id);
         // 已验证的 SSO 会话在本次服务器请求内转换为 MiSub 会话，不向浏览器下发内部 Cookie。
         const internal = await createSignedToken(env.COOKIE_SECRET, String(Date.now()));
         headers.set(
@@ -200,5 +232,6 @@ export function createVertfluxSso({
             if (!cookie.startsWith('auth_session=')) response.headers.append('Set-Cookie', cookie);
         }
         return response;
-    };
+    });
+    return (context) => guarded(context.request, context.env, context);
 }

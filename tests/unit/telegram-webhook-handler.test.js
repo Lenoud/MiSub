@@ -96,6 +96,17 @@ describe('handleTelegramWebhook', () => {
         );
     });
 
+    it('没有配置 Bot 时默认关闭，不访问 Telegram 或处理消息', async () => {
+        const { adapter } = createState({ settings: {} });
+        createAdapter.mockReturnValue(adapter);
+        const { handleTelegramWebhook } = await import('../../functions/modules/handlers/telegram-webhook-handler.js');
+        const response = await handleTelegramWebhook(createRequest({ message: { text: '/start' } }), {});
+        expect(response.status).toBe(403);
+        expect(await response.json()).toEqual({ error: 'Bot disabled' });
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(adapter.put).not.toHaveBeenCalled();
+    });
+
     it('rejects webhook requests when secret is missing', async () => {
         const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         const { state, adapter } = createState({

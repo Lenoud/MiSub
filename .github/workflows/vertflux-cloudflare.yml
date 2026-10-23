@@ -32,6 +32,8 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: 检查网关日志脱敏
+        run: node --test tests/security/gateway-audit.check.mjs
       - name: 安装依赖
         run: npm ci --no-audit --no-fund
       - name: 运行测试
