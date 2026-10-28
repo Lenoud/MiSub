@@ -29,6 +29,9 @@
         return `${window.location.origin}/${props.token}/${identifier.value}`;
     });
 
+    const hasDialerProxies = computed(() => Boolean(props.profile?.dialerProxies?.length));
+    const isFormatSupported = (type) => !hasDialerProxies.value || type === 'clash';
+
     const clients = computed(() => [
         {
             name: t('copyLink.autoDetect'),
@@ -37,10 +40,17 @@
             format: '',
         },
         {
-            name: 'Clash',
+            name: hasDialerProxies.value ? 'Clash Meta / Mihomo' : 'Clash',
             type: 'clash',
             icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
-            format: '?clash',
+            format: hasDialerProxies.value ? '?target=clash&meta=1&engine=builtin' : '?clash',
+        },
+        {
+            name: t('copyLink.shadowrocket'),
+            type: 'shadowrocket',
+            icon: 'M12 3l4 7-4 11-4-11 4-7z',
+            format: '?target=base64',
+            description: t('copyLink.shadowrocketHint'),
         },
         {
             name: 'Sing-Box',
@@ -64,13 +74,14 @@
         },
     ]);
 
-    const copyToClipboard = async (format) => {
+    const copyToClipboard = async (client) => {
+        if (!isFormatSupported(client.type)) return;
         if (!baseUrl.value) {
             showToast(t('copyLink.tokenMissing'), 'error');
             return;
         }
 
-        const link = `${baseUrl.value}${format}`;
+        const link = `${baseUrl.value}${client.format}`;
 
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -131,11 +142,26 @@
                     {{ t('copyLink.formatHint') }}
                 </p>
 
-                <div
+                <p
+                    v-if="hasDialerProxies"
+                    role="status"
+                    class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+                >
+                    {{ t('copyLink.dialerProxyHint') }}
+                </p>
+
+                <button
                     v-for="client in clients"
                     :key="client.type"
-                    @click="copyToClipboard(client.format)"
-                    class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-all duration-200 group"
+                    type="button"
+                    :disabled="!isFormatSupported(client.type)"
+                    @click="copyToClipboard(client)"
+                    class="w-full text-left flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-200 group"
+                    :class="
+                        isFormatSupported(client.type)
+                            ? 'hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer'
+                            : 'opacity-50 cursor-not-allowed'
+                    "
                 >
                     <div class="flex items-center gap-3">
                         <div
@@ -162,15 +188,21 @@
                             >
                                 {{ client.name }}
                             </p>
+                            <p
+                                v-if="client.description"
+                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                {{ client.description }}
+                            </p>
                         </div>
                     </div>
 
-                    <button
+                    <span
                         class="px-3 py-1 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 rounded-lg opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                     >
                         {{ t('actions.copy') }}
-                    </button>
-                </div>
+                    </span>
+                </button>
             </div>
         </template>
     </Modal>

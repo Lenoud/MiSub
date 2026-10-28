@@ -78,6 +78,10 @@ describe('User-Agent Utils', () => {
         });
 
         it('should default Shadowrocket adaptive subscription links to base64 unless explicitly overridden', () => {
+            const currentIPhoneUa =
+                'Shadowrocket/3445 CFNetwork/3860.700.2 Darwin/25.6.0 iPhone16,2';
+            expect(determineTargetFormat(currentIPhoneUa, new URLSearchParams(''))).toBe('base64');
+            expect(isBrowserAgent(currentIPhoneUa)).toBe(false);
             expect(
                 determineTargetFormat(
                     'Shadowrocket/2.2.60 CFNetwork/1496.0.7 Darwin/23.5.0',

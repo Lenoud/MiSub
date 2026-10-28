@@ -1380,6 +1380,11 @@ export const messages = {
         },
         copyLink: {
             autoDetect: '默认 (自动探测)',
+            shadowrocket: 'Shadowrocket（小火箭）',
+            shadowrocketHint:
+                '节点订阅（Base64）：在小火箭的“添加服务器 → Subscribe”中导入；不包含 Clash 分流规则。',
+            dialerProxyHint:
+                '此订阅组设置了前置代理，目前仅支持 Clash Meta / Mihomo 格式。小火箭链接无法携带这里的前置关系，请选择无前置代理的订阅组；客户端不兼容的格式已停用。',
             tokenMissing: '请在设置中配置一个固定的"订阅组分享Token"',
             copied: '链接已复制到剪贴板！',
             copyFailed: '复制失败，请手动复制',
@@ -3284,6 +3289,11 @@ export const messages = {
         },
         copyLink: {
             autoDetect: 'Default (auto-detect)',
+            shadowrocket: 'Shadowrocket',
+            shadowrocketHint:
+                'Base64 node subscription: import under Add Server → Subscribe in Shadowrocket. Clash routing rules are not included.',
+            dialerProxyHint:
+                'This profile has upstream proxies and currently requires Clash Meta / Mihomo. Shadowrocket links cannot carry these upstream bindings. Choose a profile without upstream proxies; incompatible formats are disabled.',
             tokenMissing: 'Please configure a fixed "subscription group share token" in settings',
             copied: 'Link copied to clipboard!',
             copyFailed: 'Copy failed, please copy manually',

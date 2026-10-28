@@ -90,6 +90,58 @@ describe('dashboard UI components', () => {
         expect(wrapper.find('input').element.value).not.toContain('?base64');
     });
 
+    it('仪表盘为小火箭生成固定 Base64 格式，支持总订阅和订阅组', async () => {
+        const wrapper = mountRightPanel({
+            config: { mytoken: 'stable-token', profileToken: 'share-token' },
+            profiles: [{ id: 'p1', customId: 'daily', name: '我的节点' }],
+        });
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Shadowrocket'))
+            .trigger('click');
+        expect(wrapper.get('input').element.value).toBe(
+            `${window.location.origin}/stable-token?target=base64`
+        );
+        await wrapper.get('select').setValue('daily');
+        expect(wrapper.get('input').element.value).toBe(
+            `${window.location.origin}/share-token/daily?target=base64`
+        );
+        expect(wrapper.text()).toContain('添加服务器');
+    });
+
+    it('切换到前置订阅时选择 Mihomo 格式，停用其他客户端的复制入口', async () => {
+        const wrapper = mountRightPanel({
+            config: { mytoken: 'stable-token', profileToken: 'share-token' },
+            profiles: [
+                {
+                    id: 'p1',
+                    name: '前置订阅',
+                    dialerProxies: [{ nodeId: 'edge', viaNodeId: 'entry' }],
+                },
+            ],
+        });
+        await wrapper.get('select').setValue('p1');
+        expect(
+            wrapper
+                .findAll('button')
+                .find((button) => button.text().includes('Shadowrocket'))
+                .attributes('disabled')
+        ).toBeDefined();
+        expect(wrapper.get('input').element.value).toBe(
+            `${window.location.origin}/share-token/p1?target=clash&meta=1&engine=builtin`
+        );
+        expect(wrapper.get('[role="status"]').text()).toContain('前置代理');
+        await wrapper.get('select').setValue('default');
+        const shadowrocket = wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Shadowrocket'));
+        expect(shadowrocket.attributes('disabled')).toBeUndefined();
+        await shadowrocket.trigger('click');
+        expect(wrapper.get('input').element.value).toBe(
+            `${window.location.origin}/stable-token?target=base64`
+        );
+    });
+
     it('does not generate copyable subscription links for invalid token characters', () => {
         const wrapper = mountRightPanel({
             config: { mytoken: ':', profileToken: 'share-token' },

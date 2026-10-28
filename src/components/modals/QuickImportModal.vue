@@ -15,6 +15,17 @@
 
     // 设备检测
     const detectedPlatform = ref(null);
+    const hasDialerProxies = computed(() => Boolean(props.profile?.dialerProxies?.length));
+    const mihomoClients = new Set([
+        'clash-verge-rev',
+        'clash-party',
+        'clashbox',
+        'stash',
+        'flclash',
+        'clashmi',
+        'flyclash',
+    ]);
+    const isClientSupported = (client) => !hasDialerProxies.value || mihomoClients.has(client.id);
 
     const detectPlatform = () => {
         const ua = navigator.userAgent;
@@ -74,19 +85,31 @@
 
     const generateDeepLink = (client) => {
         const subUrl = getSubscriptionUrl();
-        const clashSubUrl = withQueryParam(subUrl, 'target', 'clash');
+        let clashSubUrl = withQueryParam(subUrl, 'target', 'clash');
+        if (hasDialerProxies.value) {
+            clashSubUrl = withQueryParam(
+                withQueryParam(clashSubUrl, 'meta', '1'),
+                'engine',
+                'builtin'
+            );
+        }
+        const clientSubUrl = hasDialerProxies.value ? clashSubUrl : subUrl;
+        const shadowrocketSubUrl = withQueryParam(subUrl, 'target', 'base64');
         const scheme = urlSchemeMap[client.id];
 
-        if (!scheme) return null;
+        if (!scheme || !isClientSupported(client)) return null;
 
         return scheme
             .replace('{url_clash}', encodeURIComponent(clashSubUrl))
-            .replace('{url}', encodeURIComponent(subUrl))
+            .replace('{url}', encodeURIComponent(clientSubUrl))
             .replace(
                 '{name}',
                 encodeURIComponent(props.profile?.name || t('quickImport.defaultName'))
             )
-            .replace('{url_base64}', btoa(subUrl))
+            .replace(
+                '{url_base64}',
+                btoa(String.fromCharCode(...new TextEncoder().encode(shadowrocketSubUrl)))
+            )
             .replace('{url_encoded}', encodeURIComponent(subUrl));
     };
 
@@ -198,6 +221,13 @@
         </template>
 
         <template #body>
+            <p
+                v-if="hasDialerProxies"
+                role="status"
+                class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+            >
+                {{ t('copyLink.dialerProxyHint') }}
+            </p>
             <div
                 v-if="groupedClients.length === 0"
                 class="py-12 text-center text-gray-500 dark:text-gray-400"
@@ -210,7 +240,9 @@
                     v-for="client in groupedClients"
                     :key="client.id"
                     @click="handleClientClick(client)"
-                    class="group relative flex flex-col items-center gap-3 p-4 misub-radius-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                    :disabled="!isClientSupported(client)"
+                    :title="isClientSupported(client) ? undefined : t('copyLink.dialerProxyHint')"
+                    class="group relative flex flex-col items-center gap-3 p-4 misub-radius-lg border-2 transition-all duration-200 enabled:hover:scale-105 enabled:hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="
                         isRecommended(client)
                             ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-600 ring-2 ring-indigo-500/20'

@@ -119,7 +119,7 @@ export function determineFormatByUserAgent(userAgentHeader) {
         ['egern', 'clash'],
         ['nekoray', 'clash'],
         ['sing-box', 'singbox'],
-        ['shadowrocket', 'clash'],
+        ['shadowrocket', 'base64'],
         ['v2rayn', 'base64'],
         ['v2rayng', 'base64'],
         ['surge', 'surge'],

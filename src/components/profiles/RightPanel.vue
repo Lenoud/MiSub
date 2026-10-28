@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed, onUnmounted } from 'vue';
+    import { ref, computed, onUnmounted, watch } from 'vue';
     import { useToastStore } from '../../stores/toast.js';
     import { useUIStore } from '../../stores/ui.js';
     import { useI18n } from '../../i18n/index.js';
@@ -22,12 +22,26 @@
     const copied = ref(false);
     let copyTimeout = null;
 
-    const formats = ['universal', 'Base64', 'Clash', 'Sing-Box', 'Surge', 'Loon'];
+    const formats = ['universal', 'Shadowrocket', 'Base64', 'Clash', 'Sing-Box', 'Surge', 'Loon'];
     const selectedFormat = ref('universal');
     const selectedId = ref('default');
 
-    const formatLabel = (format) =>
-        format === 'universal' ? t('dashboard.linkCard.universalFormat') : format;
+    const formatLabel = (format) => {
+        if (format === 'universal') return t('dashboard.linkCard.universalFormat');
+        if (format === 'Shadowrocket') return t('copyLink.shadowrocket');
+        if (format === 'Clash' && hasDialerProxies.value) return 'Clash Meta / Mihomo';
+        return format;
+    };
+    const selectedProfile = computed(() =>
+        (props.profiles || []).find(
+            (profile) => (profile.customId || profile.id) === selectedId.value
+        )
+    );
+    const hasDialerProxies = computed(() => Boolean(selectedProfile.value?.dialerProxies?.length));
+    const isFormatSupported = (format) => !hasDialerProxies.value || format === 'Clash';
+    watch(hasDialerProxies, (hasDialer) => {
+        if (hasDialer) selectedFormat.value = 'Clash';
+    });
     const isStableToken = (value) =>
         typeof value === 'string' &&
         value.trim() === value &&
@@ -100,6 +114,9 @@
         if (selectedFormat.value === 'universal') {
             return baseUrl;
         }
+
+        if (hasDialerProxies.value) return `${baseUrl}?target=clash&meta=1&engine=builtin`;
+        if (selectedFormat.value === 'Shadowrocket') return `${baseUrl}?target=base64`;
 
         const targetMapping = { 'Sing-Box': 'singbox', QuanX: 'quanx' };
         const formatKey = targetMapping[selectedFormat.value] || selectedFormat.value.toLowerCase();
@@ -188,8 +205,9 @@
                         v-for="(format, index) in formats"
                         :key="format"
                         @click="selectedFormat = format"
+                        :disabled="!isFormatSupported(format)"
                         :aria-pressed="selectedFormat === format"
-                        class="min-h-11 px-3 py-2.5 text-xs font-medium misub-radius-lg border transition-colors flex justify-center items-center text-center list-item-animation"
+                        class="min-h-11 px-3 py-2.5 text-xs font-medium misub-radius-lg border transition-colors flex justify-center items-center text-center list-item-animation disabled:opacity-50 disabled:cursor-not-allowed"
                         :style="{ '--delay-index': index }"
                         :class="[
                             selectedFormat === format
@@ -200,6 +218,19 @@
                         {{ formatLabel(format) }}
                     </button>
                 </div>
+                <p
+                    v-if="hasDialerProxies"
+                    role="status"
+                    class="mt-3 text-sm text-amber-700 dark:text-amber-300"
+                >
+                    {{ t('copyLink.dialerProxyHint') }}
+                </p>
+                <p
+                    v-else-if="selectedFormat === 'Shadowrocket'"
+                    class="mt-3 text-sm text-gray-500 dark:text-gray-400"
+                >
+                    {{ t('copyLink.shadowrocketHint') }}
+                </p>
             </div>
 
             <div class="relative list-item-animation" style="--delay-index: 4">
