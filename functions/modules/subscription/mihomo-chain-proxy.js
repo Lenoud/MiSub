@@ -2,7 +2,7 @@
  * Mihomo/Meta 链式代理（dialer-proxy）模型变换
  *
  * 背景：mihomo 已移除 relay 策略组，节点级 `dialer-proxy` 是当前唯一受支持的链式实现方式。
- * 该变换把 ini 模板中的 `custom_chain_proxy` 声明展开为：
+ * 该变换把模板中的链式声明展开为：
  * 1. 为每个节点生成一份带 `dialer-proxy` 的落地副本（副本名带前缀，避免与原始节点重名）；
  * 2. 落地策略组改为选择这些落地副本；
  * 3. 前置策略组保持只引用原始节点，避免 dialer-proxy 环路。
@@ -132,4 +132,82 @@ export function applyMihomoChainProxy(model, { enableDialerProxy = true } = {}) 
     });
 
     return model;
+}
+
+/**
+ * 将原始 Clash YAML 配置中的链式声明适配到统一链式转换。
+ *
+ * YAML profile 模板不经过 INI 的 UnifiedTemplateModel，因此在 YAML renderer 中
+ * 需要保留原始 group 选项，同时复用 applyMihomoChainProxy 的节点复制和环路清理逻辑。
+ * @param {Object} config - Parsed Clash YAML config
+ * @param {Object} options - Conversion options
+ * @param {Array<Object>} options.chainConfigs - YAML chain declarations
+ * @param {boolean} options.enableDialerProxy - Whether to materialize dialer-proxy copies
+ * @returns {Object} The mutated Clash YAML config
+ */
+export function applyMihomoChainProxyToClashConfig(
+    config,
+    { chainConfigs = [], enableDialerProxy = true } = {}
+) {
+    if (
+        !config ||
+        !Array.isArray(config.proxies) ||
+        !Array.isArray(config['proxy-groups']) ||
+        !Array.isArray(chainConfigs) ||
+        chainConfigs.length === 0
+    ) {
+        return config;
+    }
+
+    const rawGroups = config['proxy-groups'];
+    const model = {
+        proxies: config.proxies,
+        groups: rawGroups.map((group) => {
+            const { name, type, proxies, ...options } = group || {};
+            return {
+                name,
+                type,
+                members: Array.isArray(proxies) ? [...proxies] : [],
+                filters: [],
+                options,
+            };
+        }),
+        extras: { chainProxy: chainConfigs },
+    };
+
+    applyMihomoChainProxy(model, { enableDialerProxy });
+
+    const chainGroupNames = new Set(
+        chainConfigs
+            .flatMap((chain) => [chain?.group, chain?.entry])
+            .map((name) => String(name || '').trim())
+            .filter(Boolean)
+    );
+    const rawGroupsByName = new Map(
+        rawGroups.filter((group) => group?.name).map((group) => [group.name, group])
+    );
+
+    config.proxies = model.proxies;
+    config['proxy-groups'] = model.groups.map((group) => {
+        const rawGroup = rawGroupsByName.get(group.name);
+        const outputGroup = rawGroup ? { ...rawGroup } : { name: group.name };
+
+        outputGroup.name = group.name;
+        if (group.type) outputGroup.type = group.type;
+        if (
+            chainGroupNames.has(group.name) ||
+            !rawGroup ||
+            Object.prototype.hasOwnProperty.call(rawGroup, 'proxies')
+        ) {
+            outputGroup.proxies = Array.isArray(group.members) ? [...group.members] : [];
+        }
+
+        if (chainGroupNames.has(group.name)) {
+            DYNAMIC_MEMBER_OPTION_KEYS.forEach((key) => delete outputGroup[key]);
+        }
+
+        return outputGroup;
+    });
+
+    return config;
 }

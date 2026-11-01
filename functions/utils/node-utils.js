@@ -166,7 +166,7 @@ export function addFlagEmoji(link) {
 
         // 更全面的 Emoji 检测正则 (涵盖国旗、地区符号等)
         const HAS_EMOJI_REGEX =
-            /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]{2,}\u{E007F}/u;
+            /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]{2,}\u{E007F}|[\u{1F30D}-\u{1F30F}]/u;
         if (HAS_EMOJI_REGEX.test(name)) return name;
 
         const metadata = extractNodeMetadata(name);

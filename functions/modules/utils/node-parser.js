@@ -12,6 +12,7 @@ import { convertClashProxyToUrl } from '../../utils/clash-to-url.js';
 import { extractSingboxNodes } from './singbox-to-url.js';
 import { validateSS2022Node, fixSS2022Node } from './ss2022-validator.js';
 import { extractNodeMetadata } from './metadata-extractor.js';
+import { parseV2rayNLink } from './v2rayn-parser.js';
 
 /**
  * 支持的节点协议正则表达式
@@ -260,6 +261,13 @@ export function extractValidNodes(text) {
         .map((line) => line.trim());
 
     for (const line of lines) {
+        // v2rayN 私有分享格式：v2rayn://<protocol>/<base64url(JSON)>
+        if (/^v2rayn:\/\//i.test(line)) {
+            const converted = parseV2rayNLink(line);
+            if (converted) nodes.push(converted);
+            continue;
+        }
+
         if (NODE_PROTOCOL_REGEX.test(line)) {
             nodes.push(line);
             continue;
