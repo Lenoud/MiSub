@@ -1,9 +1,11 @@
+# 每行一个路径。普通路径参与 Git 三方合并；! 开头的路径只用本地版本，上游改动会在同步 PR 中列出。
+# .github 下的路径始终只用本地版本。语法详见 .github/scripts/vertflux-sync-upstream.sh。
 .github
-wrangler.jsonc
-docs/vertflux-deployment.md
-functions/_middleware.js
-functions/_lib/vertflux-sso.js
-public/_routes.json
+!wrangler.jsonc
+!docs/vertflux-deployment.md
+!functions/_middleware.js
+!functions/_lib/vertflux-sso.js
+!public/_routes.json
 tests/unit/vertflux-sso.test.js
 functions/modules/subscription/mihomo-dialer-proxy.js
 functions/modules/subscription/template-parsers/ini-template-parser.js
