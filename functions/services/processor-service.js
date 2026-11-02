@@ -25,6 +25,7 @@ import {
     assertProfileDialerProxyTarget,
 } from '../modules/subscription/profile-dialer-proxy.js';
 import { addClashProxyGroupDescriptions } from '../modules/subscription/proxy-group-descriptions.js';
+import { applyMihomoChainProxyToClashConfig } from '../modules/subscription/mihomo-chain-proxy.js';
 
 function getTemplateExtension(templateUrl) {
     const raw = typeof templateUrl === 'string' ? templateUrl.trim() : '';
@@ -81,6 +82,40 @@ export function isClashYamlProfileTemplate(templateText) {
     }
 }
 
+/**
+ * Extract the MiSub-only YAML chain declaration and normalize it to the unified model.
+ *
+ * Example:
+ * x-misub-chain-proxy:
+ *   entry-group: 🔗 链式前置
+ *   landing-group: 🔗 链式落地
+ *   clone-prefix: "🔗 链式落地|"
+ */
+function normalizeYamlChainConfigs(config) {
+    const rawDeclaration = config['x-misub-chain-proxy'];
+    delete config['x-misub-chain-proxy'];
+
+    let declarations = [];
+    if (Array.isArray(rawDeclaration)) {
+        declarations = rawDeclaration;
+    } else if (rawDeclaration && typeof rawDeclaration === 'object') {
+        declarations = [rawDeclaration];
+    }
+
+    return declarations
+        .filter(
+            (declaration) =>
+                declaration && typeof declaration === 'object' && !Array.isArray(declaration)
+        )
+        .map((declaration) => ({
+            ...declaration,
+            // Long names are the documented YAML form; short names mirror the unified model.
+            group: declaration.group ?? declaration['landing-group'],
+            entry: declaration.entry ?? declaration['entry-group'],
+            prefix: declaration.prefix ?? declaration['clone-prefix'],
+        }));
+}
+
 export function renderClashYamlProfileTemplate(templateText, nodeList, options = {}) {
     const config = yaml.load(templateText);
     if (!config || typeof config !== 'object' || Array.isArray(config)) {
@@ -94,6 +129,15 @@ export function renderClashYamlProfileTemplate(templateText, nodeList, options =
     const proxies = urlsToClashProxies(nodeUrls, options).map(stripInternalProxyFields);
     deduplicateProxyNames(proxies);
 
+    const chainConfigs = normalizeYamlChainConfigs(config);
+    config.proxies = proxies;
+    if (chainConfigs.length > 0) {
+        applyMihomoChainProxyToClashConfig(config, {
+            chainConfigs,
+            enableDialerProxy: Boolean(options.isMeta),
+        });
+    }
+
     return yaml.dump(
         {
             ...config,
@@ -105,7 +149,7 @@ export function renderClashYamlProfileTemplate(templateText, nodeList, options =
                 mode: options.dnsMode,
                 proxyGroup: '🌐 DNS 出口',
             }),
-            proxies,
+            proxies: config.proxies,
         },
         {
             indent: 2,

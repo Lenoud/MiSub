@@ -312,6 +312,7 @@ describe('api-handler storage helper usage', () => {
             name: 'Profile New',
             subscriptions: [],
             manualNodes: [],
+            subProfiles: [],
             enabled: true,
             isPublic: false,
             downloadCount: 0,
