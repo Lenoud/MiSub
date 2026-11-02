@@ -137,10 +137,24 @@ function toClashRuleProviderUrl(sourceUrl) {
     }
 }
 
+function isMrsProviderUrl(providerUrl) {
+    try {
+        return /\.mrs$/i.test(new URL(providerUrl).pathname);
+    } catch {
+        return false;
+    }
+}
+
 function getRuleProviderBehavior(providerUrl) {
     try {
+        const pathname = new URL(providerUrl).pathname;
+        // Mihomo 的 mrs 仅支持 domain / ipcidr，配 classical 会在运行期报
+        // ErrInvalidFormat，因此按规则来源路径推断：geoip 走 ipcidr，其余走 domain。
+        if (/\.mrs$/i.test(pathname)) {
+            return /\/geoip\//i.test(pathname) ? 'ipcidr' : 'domain';
+        }
         const fileName =
-            new URL(providerUrl).pathname
+            pathname
                 .split('/')
                 .pop()
                 ?.replace(/\.(yaml|yml|list|txt|conf)$/i, '') || '';
@@ -192,7 +206,7 @@ export function renderClashFromTemplateModel(model) {
                 urlPath
                     .split('/')
                     .pop()
-                    ?.replace(/\.(yaml|yml|list|txt|conf)$/i, '') || '';
+                    ?.replace(/\.(yaml|yml|list|txt|conf|mrs)$/i, '') || '';
             if (fileName) {
                 nameHint = fileName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             }
@@ -203,13 +217,15 @@ export function renderClashFromTemplateModel(model) {
         const providerName = `${nameHint}_${providerCounter++}`;
         ruleProviderMap.set(providerUrl, providerName);
         const usesTextList = /\.(list|txt)$/i.test(providerUrl);
+        const usesMrs = isMrsProviderUrl(providerUrl);
         ruleProviders[providerName] = {
             type: 'http',
             behavior: getRuleProviderBehavior(providerUrl),
             url: providerUrl,
-            path: `./ruleset/${providerName}.${usesTextList ? 'list' : 'yaml'}`,
+            path: `./ruleset/${providerName}.${usesTextList ? 'list' : usesMrs ? 'mrs' : 'yaml'}`,
             interval: 86400,
             ...(usesTextList ? { format: 'text' } : {}),
+            ...(usesMrs ? { format: 'mrs' } : {}),
         };
     });
 

@@ -110,6 +110,26 @@ MiSub 会据此展开：
 
 落地组与前置组若未在模板中声明，MiSub 会自动创建：前置组包含全部原始节点，落地组包含全部落地副本。
 
+YAML profile 模板使用同一套语义，但通过顶层的 MiSub 扩展字段声明。字段会在输出时移除，不会泄露给客户端：
+
+```yaml
+proxy-groups:
+    - name: 🔗 链式前置
+      type: select
+      include-all-proxies: true
+    - name: 🔗 链式落地
+      type: select
+      proxies: []
+x-misub-chain-proxy:
+    entry-group: 🔗 链式前置
+    landing-group: 🔗 链式落地
+    clone-prefix: '🔗 链式落地|'
+```
+
+当请求目标为 Mihomo / Meta（例如 URL 带有 `meta=true`）时，MiSub 会生成带节点级
+`dialer-proxy: 🔗 链式前置` 的落地副本；普通 Clash 输出不生成该字段，并将落地组回退为原始节点。
+YAML 模板不应依赖 ShellCrash 专用的 `proxy-providers.chainpool`、`use: chainpool` 或 `type: relay`。
+
 > ⚠️ 注意事项
 >
 > - 链式代理是 **Mihomo / Meta 专属能力**。普通 Clash 内核（Clash Premium、Clash for Windows 等）

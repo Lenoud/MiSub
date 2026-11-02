@@ -4,6 +4,7 @@
 
 import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 import { isLocalProxyEndpoint } from './node-utils.js';
+import { parseXhttpExtra, applyDownloadInheritanceGuard } from './xhttp-extra.js';
 
 const VIRTUAL_INFO_NODE_PASSWORD = '00000000-0000-0000-0000-000000000000';
 
@@ -191,46 +192,27 @@ function parseVlessUrl(url) {
                 xhttpOpts.mode = params.get('mode');
             }
 
-            /*
-             * Xray XHTTP 分享链接中的高级参数通常保存在 extra JSON 中：
-             *
-             * extra={
-             *   "xPaddingObfsMode": true,
-             *   "xPaddingMethod": "tokenish",
-             *   "xPaddingPlacement": "queryInHeader",
-             *   "xPaddingHeader": "...",
-             *   "xPaddingKey": "..."
-             * }
-             *
-             * 转换为 Mihomo / Clash Meta 的 xhttp-opts 字段。
-             */
-            const extraRaw = params.get('extra');
-
-            if (extraRaw) {
+            const extraParam = params.get('extra');
+            if (extraParam) {
                 try {
-                    const extra = JSON.parse(extraRaw);
-
-                    if (Object.prototype.hasOwnProperty.call(extra, 'xPaddingObfsMode')) {
-                        xhttpOpts['x-padding-obfs-mode'] = extra.xPaddingObfsMode;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(extra, 'xPaddingMethod')) {
-                        xhttpOpts['x-padding-method'] = extra.xPaddingMethod;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(extra, 'xPaddingPlacement')) {
-                        xhttpOpts['x-padding-placement'] = extra.xPaddingPlacement;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(extra, 'xPaddingHeader')) {
-                        xhttpOpts['x-padding-header'] = extra.xPaddingHeader;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(extra, 'xPaddingKey')) {
-                        xhttpOpts['x-padding-key'] = extra.xPaddingKey;
+                    const extraFields = parseXhttpExtra(JSON.parse(extraParam));
+                    const { headers: extraHeaders, ...rest } = extraFields;
+                    Object.assign(xhttpOpts, rest);
+                    // URL 的 host 参数是分享链接的显式声明，优先级高于 extra 里的同名头；
+                    // HTTP 头名大小写不敏感，小写 host 也要让位，避免同一头出现两份。
+                    if (extraHeaders) {
+                        const mergedHeaders = { ...extraHeaders };
+                        if (xhttpOpts.headers?.Host) {
+                            for (const key of Object.keys(mergedHeaders)) {
+                                if (key.toLowerCase() === 'host') {
+                                    delete mergedHeaders[key];
+                                }
+                            }
+                        }
+                        xhttpOpts.headers = { ...mergedHeaders, ...(xhttpOpts.headers || {}) };
                     }
                 } catch (e) {
-                    // extra 非法时不能让整个订阅转换失败
+                    // extra 非法时不能让整个订阅转换失败。
                     console.warn('[MiSub] XHTTP extra 参数解析失败:', e);
                 }
             }
@@ -321,6 +303,14 @@ function parseVlessUrl(url) {
         // [重要] dialer-proxy 链式代理
         if (params.get('dp')) {
             proxy['dialer-proxy'] = params.get('dp');
+        }
+
+        const xhttpOpts = proxy['xhttp-opts'];
+        if (xhttpOpts) {
+            const upstreamPublicKey = proxy['reality-opts'] && proxy['reality-opts']['public-key'];
+            applyDownloadInheritanceGuard(xhttpOpts, {
+                upstreamReality: typeof upstreamPublicKey === 'string' && upstreamPublicKey !== '',
+            });
         }
 
         return proxy;
@@ -777,10 +767,11 @@ function parseHysteria2Url(url) {
             auth: password,
         };
 
-        // SNI
-        if (params.get('sni')) {
-            proxy.servername = params.get('sni');
-            proxy.sni = params.get('sni');
+        // SNI（兼容 Shadowrocket 的 peer 参数）
+        const sniParam = params.get('sni') || params.get('peer');
+        if (sniParam) {
+            proxy.servername = sniParam;
+            proxy.sni = sniParam;
         }
 
         // Skip cert verify
@@ -793,6 +784,10 @@ function parseHysteria2Url(url) {
         if (handshakeTimeout) {
             proxy['handshake-timeout'] = parseInt(handshakeTimeout, 10);
         }
+
+        // 证书指纹固定（兼容 pinSHA256 / hpkp / fingerprint），自签证书场景必需
+        const pinParam = params.get('pinSHA256') || params.get('hpkp') || params.get('fingerprint');
+        if (pinParam) proxy.fingerprint = pinParam;
 
         // Obfs
         if (params.get('obfs')) {
@@ -808,6 +803,9 @@ function parseHysteria2Url(url) {
         if (params.get('hop-interval')) proxy['hop-interval'] = params.get('hop-interval');
         if (params.get('up')) proxy.up = params.get('up');
         if (params.get('down')) proxy.down = params.get('down');
+        // 兼容 Shadowrocket / v2rayN 的 upmbps / downmbps
+        if (!proxy.up && params.get('upmbps')) proxy.up = `${params.get('upmbps')} Mbps`;
+        if (!proxy.down && params.get('downmbps')) proxy.down = `${params.get('downmbps')} Mbps`;
         const fastOpen = params.get('fast_open') || params.get('fast-open');
         if (fastOpen === '1' || fastOpen === 'true') {
             proxy['fast-open'] = true;

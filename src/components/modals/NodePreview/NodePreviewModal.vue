@@ -11,6 +11,7 @@
     import NodeList from './components/NodeList.vue';
     import NodeCard from './components/NodeCard.vue';
     import NodePagination from './components/NodePagination.vue';
+    import { REGION_EMOJI } from '../../../../functions/modules/utils/geo-utils.js';
 
     const isDev = import.meta.env.DEV;
     const { t } = useI18n();
@@ -395,8 +396,9 @@
     // 获取地区 Emoji
     const getRegionEmoji = (region) => {
         if (!region) return '🌐';
+        if (REGION_EMOJI[region]) return REGION_EMOJI[region];
 
-        // 常见国家/地区映射
+        // 英文代码别名。中文地区名以 geo-utils 的旗帜表为准，台湾固定为 🇨🇳。
         const regionMap = {
             HK: '🇭🇰',
             'Hong Kong': '🇭🇰',

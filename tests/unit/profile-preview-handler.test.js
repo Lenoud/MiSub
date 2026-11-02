@@ -106,7 +106,52 @@ describe('handleProfileMode preview transforms', () => {
         expect(fetchSubscriptionNodes).toHaveBeenCalledTimes(1);
         expect(fetchSubscriptionNodes).toHaveBeenCalledWith(
             'https://sub.example.com/link', 'HTTPS source', expect.any(String), undefined,
-            false, undefined, undefined, false, false, false
+            false, undefined, undefined, false, false, false,
+            expect.anything(), expect.objectContaining({ id: 'subscription-http' })
         );
+    });
+
+    it('includes enabled manual protocol nodes in profile preview', async () => {
+        createAdapter.mockReturnValue({
+            getProfileById: vi.fn().mockResolvedValue({
+                id: 'profile-manual',
+                enabled: true,
+                subscriptions: [],
+                manualNodes: ['node-ss', 'node-off'],
+                operators: [],
+            }),
+            getSubscriptionsByIds: vi.fn().mockResolvedValue([
+                {
+                    id: 'node-ss',
+                    enabled: true,
+                    name: 'Manual SS',
+                    url: 'ss://YWVzLTI1Ni1nY206cGFzcw@example.com:443#Old',
+                },
+                {
+                    id: 'node-off',
+                    enabled: false,
+                    name: 'Disabled',
+                    url: 'vless://uuid@example.com:443#Disabled',
+                },
+            ]),
+            get: vi.fn().mockResolvedValue({ defaultOperators: [] }),
+        });
+
+        const { handleProfileMode } =
+            await import('../../functions/modules/subscription/profile-handler.js');
+        const result = await handleProfileMode(
+            new Request('https://example.com/api/subscription_nodes'),
+            {},
+            'profile-manual',
+            'MiSub-Test/1.0',
+            false,
+            false
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.nodes).toHaveLength(1);
+        expect(result.nodes[0].name).toBe('Manual SS');
+        expect(result.nodes[0].url).toContain('#Manual%20SS');
+        expect(fetchSubscriptionNodes).not.toHaveBeenCalled();
     });
 });

@@ -5,7 +5,7 @@
     import GroupSelector from '../ui/GroupSelector.vue'; // Added
     import { useDataStore } from '../../stores/useDataStore.js';
     import { useSubscriptions } from '../../composables/useSubscriptions.js';
-    import { useBulkImportLogic } from '../../composables/useBulkImportLogic.js';
+    import { useBulkImportLogic, needsServerParsing } from '../../composables/useBulkImportLogic.js';
     import { useManualNodes } from '../../composables/useManualNodes.js';
     import { useI18n } from '../../i18n/index.js';
     import { parseSurgeConfig } from '../../utils/protocolConverter.js';
@@ -82,6 +82,7 @@
         if (!url) return null;
         const lowerUrl = url.toLowerCase().trim();
         if (lowerUrl.startsWith('anytls://')) return { name: 'AnyTLS', color: 'slate' };
+        if (lowerUrl.startsWith('v2rayn://')) return { name: 'v2rayN', color: 'blue' };
         if (lowerUrl.startsWith('hysteria2://') || lowerUrl.startsWith('hy2://'))
             return { name: 'HY2', color: 'purple' };
         if (lowerUrl.startsWith('hysteria://') || lowerUrl.startsWith('hy://'))
@@ -160,15 +161,20 @@
         }
     };
 
-    const handleConfirm = () => {
-        if (props.isNew && isMultiLine.value) {
-            // 多行批量导入：未填写分组时自动生成一个（用户无需手填）
+    const handleConfirm = async () => {
+        // v2rayn:// 私有分享格式、Clash YAML、sing-box JSON 前端解析不了，
+        // 单行粘贴时也要交给后端转成标准 URI，否则会被原样存成一个坏节点
+        const rawUrl = (props.editingNode?.url || '').trim();
+        const requiresServerParsing = props.isNew && rawUrl && needsServerParsing(rawUrl);
+
+        if (props.isNew && (isMultiLine.value || requiresServerParsing)) {
+            // 多行批量导入 / 需后端转换：未填写分组时自动生成一个（用户无需手填）
             let groupName = (props.editingNode.group || '').trim();
             if (!groupName) {
                 groupName = buildAutoGroupName();
                 props.editingNode.group = groupName;
             }
-            handleBulkImport(props.editingNode.url, groupName);
+            await handleBulkImport(props.editingNode.url, groupName);
             emit('update:show', false);
             return;
         }
